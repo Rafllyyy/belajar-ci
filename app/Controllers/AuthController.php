@@ -20,13 +20,16 @@ class AuthController extends BaseController
 
             $dataUser = ['username' => 'april', 'password' => '202cb962ac59075b964b07152d234b70', 'role' => 'admin']; // passw 123
 
+            date_default_timezone_set('Asia/Jakarta');
+
             if ($username == $dataUser['username']) {
                 if (md5($password) == $dataUser['password']) {
                     session()->set([
-                        'username' => $dataUser['username'],
-                        'role' => $dataUser['role'],
-                        'isLoggedIn' => TRUE
-                    ]);
+                    'username'   => $dataUser['username'],
+                    'role'       => $dataUser['role'],   
+                    'isLoggedIn' => TRUE,
+                    'login_time' => date('d-m-Y H:i:s'),
+                ]);
 
                     return redirect()->to(base_url('/'));
                 } else {
