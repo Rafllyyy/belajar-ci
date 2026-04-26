@@ -13,6 +13,7 @@ class ProfileController extends BaseController
         $data = [
             'title'        => 'Profil Pengguna',
             'username'     => $session->get('username'),
+            'email'        => $session->get('email'),
             'role'         => $session->get('role'),
             'login_time'   => $session->get('login_time'),
             'is_logged_in' => $session->has('isLoggedIn'),
