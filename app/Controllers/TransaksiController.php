@@ -20,39 +20,39 @@ class TransaksiController extends BaseController
         helper(['number', 'form']);
         $this->cart = service('cart');
         $this->transactionModel = new TransactionModel();
-        $this->transactionDetailModel = new TransactionDetailModel(); 
+        $this->transactionDetailModel = new TransactionDetailModel();
     }
 
     public function index()
-    {  
+    {
         $data = [
             'items' => $this->cart->contents(),
-            'total' => $this->cart->total() 
+            'total' => $this->cart->total()
         ];
 
-    return view('v_keranjang', $data);
+        return view('v_keranjang', $data);
     }
 
     public function cart_add()
     {
         $this->cart->insert([
-            'id'      => $this->request->getPost('id'),
-            'qty'     => 1,
-            'price'   => $this->request->getPost('harga'),
-            'name'    => $this->request->getPost('nama'),
+            'id' => $this->request->getPost('id'),
+            'qty' => 1,
+            'price' => $this->request->getPost('harga'),
+            'name' => $this->request->getPost('nama'),
             'options' => [
                 'foto' => $this->request->getPost('foto')
             ]
         ]);
-        
+
         session()->setFlashdata(
             'success',
             'Produk berhasil ditambahkan ke keranjang. 
             <a href="' . base_url('keranjang') . '">Lihat</a>'
         );
-        
+
         return redirect()->to(base_url('/'));
-    } 
+    }
 
     public function cart_edit()
     {
@@ -62,7 +62,7 @@ class TransaksiController extends BaseController
 
             $this->cart->update([
                 'rowid' => $item['rowid'],
-                'qty'   => $qty
+                'qty' => $qty
             ]);
         }
 
@@ -99,10 +99,10 @@ class TransaksiController extends BaseController
     }
 
     public function checkout()
-    {  
+    {
         $data = [
             'items' => $this->cart->contents(),
-            'total' => $this->cart->total() 
+            'total' => $this->cart->total()
         ];
 
         return view('v_checkout', $data);
@@ -110,7 +110,7 @@ class TransaksiController extends BaseController
 
     public function destinations()
     {
-        $search = $this->request->getGet('q'); 
+        $search = $this->request->getGet('q');
 
         if (empty($search)) {
             return $this->response->setJSON([
@@ -126,7 +126,7 @@ class TransaksiController extends BaseController
 
         foreach ($data as $item) {
             $results[] = [
-                'id'   => $item['id'],
+                'id' => $item['id'],
                 'text' => $item['label']
             ];
         }
@@ -141,7 +141,7 @@ class TransaksiController extends BaseController
         $origin = '64999';
         $destination = $this->request->getGet('destination');
         $weight = '1000';
-        $courier = 'jne'; 
+        $courier = 'jne';
 
         $service = new RajaOngkirService();
         $response = $service->getCost($origin, $destination, $weight, $courier);
@@ -151,10 +151,10 @@ class TransaksiController extends BaseController
 
         foreach ($data as $item) {
             $results[] = [
-                'service'     => $item['service'],
+                'service' => $item['service'],
                 'description' => $item['description'],
-                'cost'        => $item['cost'],
-                'etd'         => $item['etd']
+                'cost' => $item['cost'],
+                'etd' => $item['etd']
             ];
         }
 
@@ -162,7 +162,7 @@ class TransaksiController extends BaseController
     }
 
     public function buy()
-    { 
+    {
         $cartItems = $this->cart->contents();
 
         if (empty($cartItems)) {
@@ -170,8 +170,9 @@ class TransaksiController extends BaseController
         }
 
         $db = \Config\Database::connect();
-        $db->transStart(); 
+        $db->transStart();
 
+        // Hitung subtotal
         $subtotal = 0;
         foreach ($cartItems as $item) {
             $subtotal += $item['qty'] * $item['price'];
@@ -179,12 +180,35 @@ class TransaksiController extends BaseController
 
         $ongkir = (int) $this->request->getPost('ongkir');
 
+        // Ambil voucher dari form
+        $voucher_code = $this->request->getPost('voucher_code');
+
+        // Hitung komponen tambahan
+        $voucher = hitung_diskon_voucher($subtotal, $voucher_code);
+
+        $diskon_voucher = $voucher['diskon_voucher'];
+        $ppn = hitung_ppn($subtotal);
+        $biaya_admin = hitung_biaya_admin($subtotal);
+
+        // Grand Total
+        $grand_total = $subtotal
+            - $diskon_voucher
+            + $ppn
+            + $biaya_admin
+            + $ongkir;
+
         $transaction = [
-            'username'    => $this->request->getPost('username'),
-            'alamat'      => $this->request->getPost('alamat'),
-            'ongkir'      => $ongkir,
-            'total_harga' => $subtotal + $ongkir,
-            'status'      => 0, 
+            'username' => $this->request->getPost('username'),
+            'alamat' => $this->request->getPost('alamat'),
+            'ongkir' => $ongkir,
+
+            'ppn' => $ppn,
+            'biaya_admin' => $biaya_admin,
+            'voucher_code' => empty($voucher['voucher_code']) ? null : $voucher['voucher_code'],
+            'diskon_voucher' => $diskon_voucher,
+
+            'total_harga' => $grand_total,
+            'status' => 0,
         ];
 
         // insert transaction
@@ -199,10 +223,10 @@ class TransaksiController extends BaseController
         foreach ($cartItems as $item) {
             $this->transactionDetailModel->insert([
                 'transaction_id' => $transactionId,
-                'product_id'     => $item['id'],
-                'jumlah'         => $item['qty'],
-                'diskon'         => 0,
-                'subtotal_harga' => $item['qty'] * $item['price'] 
+                'product_id' => $item['id'],
+                'jumlah' => $item['qty'],
+                'diskon' => 0,
+                'subtotal_harga' => $item['qty'] * $item['price']
             ]);
         }
 
@@ -212,26 +236,67 @@ class TransaksiController extends BaseController
             return redirect()->back()->with('error', 'Gagal membuat transaksi');
         }
 
-            //hapus session keranjang belanja 
         $this->cart->destroy();
+
+        session()->setFlashdata(
+            'success',
+            'Pesanan berhasil dibuat. Terima kasih telah berbelanja!'
+        );
+
         return redirect()->to(base_url());
     }
 
     public function history()
     {
-        $username = session()->get('username'); 
-    
+        $username = session()->get('username');
+
         $transactions = $this->transactionModel->where('username', $username)->findAll();
         $transactionIds = array_column($transactions, 'id');
 
         $products = $this->transactionDetailModel->getProductsByTransactionIds($transactionIds);
 
         $data = [
-            'username'      => $username,
-            'transactions'  => $transactions,
-            'products'      => $products
-        ]; 
+            'username' => $username,
+            'transactions' => $transactions,
+            'products' => $products
+        ];
 
         return view('v_history', $data);
+    }
+
+    public function history_delete($id)
+    {
+        $username = session()->get('username');
+
+        // Pastikan transaksi ada dan milik user yang sedang login
+        $transaction = $this->transactionModel
+            ->where('id', $id)
+            ->where('username', $username)
+            ->first();
+
+        if (empty($transaction)) {
+            session()->setFlashdata('error', 'Riwayat transaksi tidak ditemukan');
+            return redirect()->to(base_url('history'));
+        }
+
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        // Hapus detail transaksi (item-item produk) terlebih dahulu
+        $this->transactionDetailModel->where('transaction_id', $id)->delete();
+
+        // Baru hapus transaksinya
+        $this->transactionModel->delete($id);
+
+        $db->transComplete();
+
+        if (!$db->transStatus()) {
+            session()->setFlashdata('error', 'Gagal menghapus riwayat transaksi');
+            return redirect()->to(base_url('history'));
+        }
+
+        session()->setFlashdata('success', 'Riwayat transaksi berhasil dihapus');
+
+        return redirect()->to(base_url('history'));
     }
 }

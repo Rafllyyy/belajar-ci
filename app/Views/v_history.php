@@ -1,5 +1,17 @@
 <?= $this->extend('layout') ?>
 <?= $this->section('content') ?>
+<?php if (session()->getFlashData('success')) : ?>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <?= session()->getFlashData('success') ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+<?php endif; ?>
+<?php if (session()->getFlashData('error')) : ?>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <?= session()->getFlashData('error') ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+<?php endif; ?>
 History Transaksi Pembelian <strong><?= $username ?></strong>
 <hr>
 <div class="table-responsive">
@@ -36,6 +48,11 @@ History Transaksi Pembelian <strong><?= $username ?></strong>
                             <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#detailModal-<?= $item['id'] ?>">
                                 Detail
                             </button>
+                            <a href="<?= base_url('history/delete/' . $item['id']) ?>"
+                                class="btn btn-danger btn-sm"
+                                onclick="return confirm('Yakin ingin menghapus riwayat transaksi #<?= $item['id'] ?>?');">
+                                Hapus
+                            </a>
                         </td>
                     </tr> 
             <?php
@@ -80,7 +97,36 @@ History Transaksi Pembelian <strong><?= $username ?></strong>
                                 <hr>
                             <?php endforeach; ?>
                         <?php endif; ?>
-                        Ongkir <?= number_to_currency($item['ongkir'], 'IDR') ?>
+                        <table class="table table-sm mb-0">
+                            <tbody>
+                                <?php if (!empty($item['voucher_code'])) : ?>
+                                    <tr>
+                                        <td>Voucher</td>
+                                        <td class="text-end"><?= esc($item['voucher_code']) ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Diskon Voucher</td>
+                                        <td class="text-end">-<?= number_to_currency($item['diskon_voucher'] ?? 0, 'IDR') ?></td>
+                                    </tr>
+                                <?php endif; ?>
+                                <tr>
+                                    <td>PPN (11%)</td>
+                                    <td class="text-end"><?= number_to_currency($item['ppn'] ?? 0, 'IDR') ?></td>
+                                </tr>
+                                <tr>
+                                    <td>Biaya Admin</td>
+                                    <td class="text-end"><?= number_to_currency($item['biaya_admin'] ?? 0, 'IDR') ?></td>
+                                </tr>
+                                <tr>
+                                    <td>Ongkir</td>
+                                    <td class="text-end"><?= number_to_currency($item['ongkir'], 'IDR') ?></td>
+                                </tr>
+                                <tr class="table-success">
+                                    <td><b>Grand Total</b></td>
+                                    <td class="text-end"><b><?= number_to_currency($item['total_harga'], 'IDR') ?></b></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

@@ -6,13 +6,23 @@ use CodeIgniter\Model;
 
 class TransactionModel extends Model
 {
-    protected $table            = 'transaction'; //disesuaikan
-    protected $primaryKey       = 'id';
+    protected $table = 'transaction'; //disesuaikan
+    protected $primaryKey = 'id';
     protected $useAutoIncrement = true;
-    protected $returnType       = 'array';
-    protected $useSoftDeletes   = true; //disesuaikan
-    protected $protectFields    = true;
-    protected $allowedFields    = ['username', 'total_harga', 'alamat', 'ongkir', 'status']; //disesuaikan
+    protected $returnType = 'array';
+    protected $useSoftDeletes = true; //disesuaikan
+    protected $protectFields = true;
+    protected $allowedFields = [
+        'username',
+        'total_harga',
+        'alamat',
+        'ongkir',
+        'status',
+        'ppn',
+        'biaya_admin',
+        'voucher_code',
+        'diskon_voucher',
+    ]; //disesuaikan
 
     protected bool $allowEmptyInserts = false;
     protected bool $updateOnlyChanged = true;
@@ -22,25 +32,25 @@ class TransactionModel extends Model
 
     // Dates
     protected $useTimestamps = true; //disesuaikan
-    protected $dateFormat    = 'datetime';
-    protected $createdField  = 'created_at';
-    protected $updatedField  = 'updated_at';
-    protected $deletedField  = 'deleted_at';
+    protected $dateFormat = 'datetime';
+    protected $createdField = 'created_at';
+    protected $updatedField = 'updated_at';
+    protected $deletedField = 'deleted_at';
 
     // Validation
-    protected $validationRules      = [];
-    protected $validationMessages   = [];
-    protected $skipValidation       = true; //disesuaikan
+    protected $validationRules = [];
+    protected $validationMessages = [];
+    protected $skipValidation = true; //disesuaikan
     protected $cleanValidationRules = true;
 
     // Callbacks
     protected $allowCallbacks = true;
-    protected $beforeInsert   = [];
-    protected $afterInsert    = [];
-    protected $beforeUpdate   = [];
-    protected $afterUpdate    = [];
-    protected $beforeFind     = [];
-    protected $afterFind      = [];
-    protected $beforeDelete   = [];
-    protected $afterDelete    = [];
+    protected $beforeInsert = [];
+    protected $afterInsert = [];
+    protected $beforeUpdate = [];
+    protected $afterUpdate = [];
+    protected $beforeFind = [];
+    protected $afterFind = [];
+    protected $beforeDelete = [];
+    protected $afterDelete = [];
 }
